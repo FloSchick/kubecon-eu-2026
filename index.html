@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#1e40af">
+  <meta name="theme-color" content="#213A3E">
   <title>KubeCon EU 2026 · Talk Browser</title>
   <script src="data.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -11,19 +11,20 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:       #f0f4f8;
+      --bg:       #F2F1E7;
       --surface:  #ffffff;
-      --border:   #dde3ed;
-      --text:     #1e293b;
-      --muted:    #64748b;
-      --primary:  #1e40af;
-      --primary-light: #dbeafe;
+      --border:   #d8d7cc;
+      --text:     #213A3E;
+      --muted:    #5a6e71;
+      --primary:  #213A3E;
+      --primary-light: #d5e8e9;
+      --accent:   #CCE761;
       --mon:   #b45309; --mon-bg:   #fef3c7;
       --tue:   #065f46; --tue-bg:   #d1fae5;
       --wed:   #4338ca; --wed-bg:   #ede9fe;
       --thu:   #9f1239; --thu-bg:   #ffe4e6;
       --radius: 10px;
-      --shadow: 0 1px 4px rgba(0,0,0,.08), 0 2px 8px rgba(0,0,0,.04);
+      --shadow: 0 1px 4px rgba(33,58,62,.08), 0 2px 8px rgba(33,58,62,.04);
     }
 
     body {
@@ -37,16 +38,17 @@
     /* ── Header ──────────────────────────────────────── */
     header {
       background: var(--primary);
-      color: white;
+      color: #F2F1E7;
       padding: env(safe-area-inset-top, 0) 0 0;
       position: sticky; top: 0; z-index: 100;
+      border-bottom: 3px solid var(--accent);
     }
     .header-top {
       display: flex; align-items: center; justify-content: space-between;
       padding: 12px 16px 10px;
     }
     .header-top h1 { font-size: 1.1rem; font-weight: 700; }
-    .header-top .subtitle { font-size: .75rem; opacity: .8; margin-top: 1px; }
+    .header-top .subtitle { font-size: .75rem; color: var(--accent); margin-top: 1px; opacity: .85; }
 
     /* ── Tabs ────────────────────────────────────────── */
     .tabs {
@@ -54,12 +56,12 @@
     }
     .tab-btn {
       flex: 1; padding: 10px 8px; background: none; border: none;
-      color: rgba(255,255,255,.65); font-size: .85rem; font-weight: 600;
+      color: rgba(242,241,231,.6); font-size: .85rem; font-weight: 600;
       cursor: pointer; border-bottom: 3px solid transparent;
       transition: color .15s, border-color .15s;
     }
     .tab-btn.active {
-      color: white; border-bottom-color: white;
+      color: var(--accent); border-bottom-color: var(--accent);
     }
 
     /* ── Search + filters ────────────────────────────── */
@@ -107,7 +109,7 @@
     }
     .chip:active { transform: scale(.95); }
 
-    .chip.day-all.active, .chip.day-all:hover { background: var(--primary); color: white; border-color: var(--primary); }
+    .chip.day-all.active, .chip.day-all:hover { background: var(--accent); color: var(--primary); border-color: var(--accent); }
     .chip.day-mon { color: var(--mon); border-color: #fcd34d; background: var(--mon-bg); }
     .chip.day-mon.active, .chip.day-mon:hover { background: var(--mon); color: white; }
     .chip.day-tue { color: var(--tue); border-color: #6ee7b7; background: var(--tue-bg); }
@@ -118,7 +120,7 @@
     .chip.day-thu.active, .chip.day-thu:hover { background: var(--thu); color: white; }
 
     .tag-chip { background: var(--bg); color: var(--muted); border-color: var(--border); }
-    .tag-chip.active { background: var(--primary); color: white; border-color: var(--primary); }
+    .tag-chip.active { background: var(--accent); color: var(--primary); border-color: var(--accent); font-weight: 700; }
 
     /* ── Results meta ────────────────────────────────── */
     .results-meta {
@@ -257,18 +259,18 @@
     #schedule-content { background: var(--surface); border-radius: var(--radius);
       border: 1px solid var(--border); padding: 20px 16px; box-shadow: var(--shadow); }
     #schedule-content h1 { font-size: 1.3rem; margin-bottom: 8px; }
-    #schedule-content h2 { font-size: 1.1rem; margin: 24px 0 10px; padding-bottom: 4px;
-      border-bottom: 2px solid var(--border); color: var(--primary); }
+    #schedule-content h2 { font-size: 1.1rem; margin: 24px 0 10px; padding-bottom: 6px;
+      border-bottom: 3px solid var(--accent); color: var(--primary); }
     #schedule-content h3 { font-size: .95rem; margin: 16px 0 8px; color: var(--text); }
     #schedule-content h4 { font-size: .85rem; margin: 12px 0 6px; color: var(--muted); }
     #schedule-content p { font-size: .85rem; line-height: 1.6; margin-bottom: 8px; color: var(--text); }
     #schedule-content ul, #schedule-content ol { padding-left: 20px; font-size: .85rem; line-height: 1.6; margin-bottom: 8px; }
     #schedule-content li { margin-bottom: 2px; }
     #schedule-content table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: .8rem; overflow-x: auto; display: block; }
-    #schedule-content th { background: var(--bg); padding: 8px 10px; text-align: left;
+    #schedule-content th { background: var(--primary); color: var(--accent); padding: 8px 10px; text-align: left;
       border: 1px solid var(--border); font-weight: 700; }
     #schedule-content td { padding: 7px 10px; border: 1px solid var(--border); vertical-align: top; }
-    #schedule-content tr:nth-child(even) td { background: #fafbfc; }
+    #schedule-content tr:nth-child(even) td { background: var(--bg); }
     #schedule-content code { font-family: 'SF Mono', 'Fira Code', monospace; font-size: .8em;
       background: var(--bg); padding: 1px 4px; border-radius: 3px; }
     #schedule-content blockquote { border-left: 3px solid var(--primary); padding: 6px 12px;
@@ -286,20 +288,20 @@
       font-size: .82rem; font-weight: 600; border: 1.5px solid var(--border);
       background: var(--surface); color: var(--text);
     }
-    .schedule-day-nav a:hover { border-color: var(--primary); color: var(--primary); }
+    .schedule-day-nav a:hover { border-color: var(--accent); background: var(--accent); color: var(--primary); }
 
     /* ── Loading spinner ─────────────────────────────── */
     #loader { text-align: center; padding: 60px; color: var(--muted); display: none; }
 
     /* ── Highlight ───────────────────────────────────── */
-    mark { background: #fef08a; color: inherit; border-radius: 2px; padding: 0 1px; }
+    mark { background: var(--accent); color: var(--primary); border-radius: 2px; padding: 0 2px; font-weight: 600; }
 
     /* ── Scroll to top btn ───────────────────────────── */
     #scroll-top {
       position: fixed; bottom: calc(env(safe-area-inset-bottom, 0px) + 16px); right: 16px;
-      width: 44px; height: 44px; border-radius: 50%; background: var(--primary);
-      color: white; border: none; cursor: pointer; font-size: 1.2rem;
-      box-shadow: 0 4px 12px rgba(30,64,175,.4); display: none; align-items: center;
+      width: 44px; height: 44px; border-radius: 50%; background: var(--accent);
+      color: var(--primary); border: none; cursor: pointer; font-size: 1.2rem; font-weight: 700;
+      box-shadow: 0 4px 12px rgba(204,231,97,.5); display: none; align-items: center;
       justify-content: center; z-index: 50;
     }
     #scroll-top.visible { display: flex; }
