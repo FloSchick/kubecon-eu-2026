@@ -122,6 +122,18 @@
     .tag-chip { background: var(--bg); color: var(--muted); border-color: var(--border); }
     .tag-chip.active { background: var(--accent); color: var(--primary); border-color: var(--accent); font-weight: 700; }
 
+    .past-toggle {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 10px; border-radius: 20px; cursor: pointer;
+      font-size: .78rem; font-weight: 600; color: var(--muted);
+      background: var(--bg); border: 1.5px solid var(--border);
+      user-select: none; transition: all .15s;
+    }
+    .past-toggle input { accent-color: var(--primary); cursor: pointer; }
+    .past-toggle.on { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
+
+    .sched-chip.active { background: var(--accent); color: var(--primary); border-color: var(--accent); font-weight: 700; }
+
     /* ── Results meta ────────────────────────────────── */
     .results-meta {
       padding: 8px 16px 4px;
@@ -280,15 +292,6 @@
     #schedule-content a { color: var(--primary); }
     #schedule-content hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
 
-    .schedule-day-nav {
-      display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;
-    }
-    .schedule-day-nav a {
-      padding: 6px 14px; border-radius: 20px; text-decoration: none;
-      font-size: .82rem; font-weight: 600; border: 1.5px solid var(--border);
-      background: var(--surface); color: var(--text);
-    }
-    .schedule-day-nav a:hover { border-color: var(--accent); background: var(--accent); color: var(--primary); }
 
     /* ── Loading spinner ─────────────────────────────── */
     #loader { text-align: center; padding: 60px; color: var(--muted); display: none; }
@@ -343,6 +346,11 @@
   <div class="filter-row" id="tag-filters">
     <!-- populated by JS -->
   </div>
+  <div style="padding-top:6px">
+    <label class="past-toggle" id="hide-past-label">
+      <input type="checkbox" id="hide-past"> Hide past talks
+    </label>
+  </div>
 </div>
 
 <div class="results-meta" id="results-meta"></div>
@@ -357,12 +365,6 @@
 </div>
 
 <div id="schedule-view">
-  <div class="schedule-day-nav">
-    <a href="#monday">Monday</a>
-    <a href="#tuesday">Tuesday</a>
-    <a href="#wednesday">Wednesday</a>
-    <a href="#thursday">Thursday</a>
-  </div>
   <div id="schedule-content">Loading schedule…</div>
 </div>
 
@@ -411,6 +413,17 @@ let expandedCards = new Set();
 let currentTab = 'talks';
 let scheduleLoaded = false;
 let debounceTimer = null;
+let hidePast = false;
+let schedPriorities = new Set(); // empty = show all
+let schedDay = '';              // empty = all days
+
+const CONF_DATES = { Monday:'2026-03-23', Tuesday:'2026-03-24', Wednesday:'2026-03-25', Thursday:'2026-03-26' };
+
+function isPast(t) {
+  const d = CONF_DATES[t.day];
+  if (!d || !t.time_end) return false;
+  return new Date(`${d}T${t.time_end}:00`) < new Date();
+}
 
 // ── Init ────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -452,6 +465,13 @@ document.addEventListener('DOMContentLoaded', () => {
     render();
   });
 
+  // Hide past toggle
+  document.getElementById('hide-past').addEventListener('change', (e) => {
+    hidePast = e.target.checked;
+    document.getElementById('hide-past-label').classList.toggle('on', hidePast);
+    render();
+  });
+
   // Scroll-to-top
   window.addEventListener('scroll', () => {
     document.getElementById('scroll-top').classList.toggle('visible', window.scrollY > 400);
@@ -475,6 +495,7 @@ function buildTagFilters() {
 function filterTalks() {
   const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
   return TALKS_DATA.filter(t => {
+    if (hidePast && isPast(t)) return false;
     if (selectedDay && t.day !== selectedDay) return false;
     if (selectedTags.size > 0 && !t.tags.some(tag => selectedTags.has(tag))) return false;
     if (terms.length > 0) {
@@ -626,11 +647,286 @@ function loadSchedule() {
              .replace(/^## (Wednesday.*)$/m, '<a name="wednesday"></a>\n## $1')
              .replace(/^## (Thursday.*)$/m, '<a name="thursday"></a>\n## $1');
       document.getElementById('schedule-content').innerHTML = marked.parse(md);
+      processSchedule();
     })
     .catch(() => {
       document.getElementById('schedule-content').innerHTML =
         '<p>Could not load schedule. <a href="schedule.md">View raw file</a></p>';
     });
+}
+
+// ── Schedule interactivity ────────────────────────────────
+function normKey(s) {
+  return s.replace(/★+\s*/g, '').replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
+function buildTitleMap() {
+  const map = new Map();
+  TALKS_DATA.forEach(t => {
+    if (t.url) map.set(normKey(t.title), t.url);
+  });
+  return map;
+}
+
+function findUrl(titleMap, text) {
+  const key = normKey(text);
+  if (titleMap.has(key)) return titleMap.get(key);
+  for (const [k, v] of titleMap) {
+    const len = Math.min(32, key.length, k.length);
+    if (len > 12 && key.slice(0, len) === k.slice(0, len)) return v;
+  }
+  return null;
+}
+
+// Link bold talk titles in table cells to sched.com
+function linkScheduleTitles(titleMap) {
+  document.querySelectorAll('#schedule-content td strong').forEach(strong => {
+    if (strong.querySelector('a')) return;
+    const url = findUrl(titleMap, strong.textContent);
+    if (!url) return;
+    const a = document.createElement('a');
+    a.href = url; a.target = '_blank'; a.rel = 'noopener';
+    a.style.cssText = 'color:inherit;text-decoration:none;border-bottom:1.5px solid var(--accent);padding-bottom:1px';
+    while (strong.firstChild) a.appendChild(strong.firstChild);
+    strong.appendChild(a);
+  });
+}
+
+// Extract abstracts section → inject as expandable rows into day tables
+function injectAbstracts(content) {
+  const abstractMap = new Map();
+  let inAbstracts = false;
+  let currentKey = null;
+  const toHide = [];
+
+  Array.from(content.children).forEach(el => {
+    if (el.tagName === 'H2' && /verified talk abstracts/i.test(el.textContent)) {
+      inAbstracts = true; toHide.push(el); return;
+    }
+    if (!inAbstracts) return;
+    if (/report generated/i.test(el.textContent)) return; // keep footer
+    toHide.push(el);
+    if (el.tagName === 'P' && el.querySelector('strong')) {
+      currentKey = normKey(el.querySelector('strong').textContent);
+    } else if (el.tagName === 'BLOCKQUOTE' && currentKey) {
+      abstractMap.set(currentKey, el.innerHTML);
+      currentKey = null;
+    }
+  });
+  toHide.forEach(el => el.style.display = 'none');
+
+  // Inject into day table rows
+  content.querySelectorAll('tbody tr[data-stars]').forEach(row => {
+    if (parseInt(row.dataset.stars) === 0) return;
+    const strong = row.querySelector('td strong');
+    if (!strong) return;
+    const abstract = abstractMap.get(normKey(strong.textContent))
+      || (() => { for (const [k,v] of abstractMap) { if (normKey(strong.textContent).slice(0,28) === k.slice(0,28) && k.length > 12) return v; } })();
+    if (!abstract) return;
+
+    const colCount = row.querySelectorAll('td').length;
+    const detailRow = document.createElement('tr');
+    detailRow.className = 'abstract-row';
+    detailRow.dataset.day = row.dataset.day || '';
+    detailRow.dataset.isAbstract = '1';
+    detailRow.style.display = 'none';
+    detailRow.innerHTML = `<td colspan="${colCount}" style="padding:0 0 6px 0;border-top:none">
+      <div style="border-left:3px solid var(--accent);margin:0 8px;padding:8px 12px;background:var(--bg);font-size:.8rem;color:var(--muted);line-height:1.6;border-radius:0 0 6px 6px">${abstract}</div>
+    </td>`;
+
+    const btn = document.createElement('button');
+    btn.className = 'abs-toggle';
+    btn.textContent = '▼ abstract';
+    btn.style.cssText = 'display:inline-block;margin-top:3px;background:none;border:none;cursor:pointer;color:var(--muted);font-size:.68rem;font-weight:700;padding:0;letter-spacing:.03em;text-transform:uppercase;opacity:.8';
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const open = detailRow.style.display !== 'none';
+      detailRow.style.display = open ? 'none' : '';
+      btn.textContent = open ? '▼ abstract' : '▲ abstract';
+    });
+
+    const titleCell = row.querySelector('td:nth-child(2)') || row.querySelector('td');
+    if (titleCell) titleCell.appendChild(btn);
+    row.insertAdjacentElement('afterend', detailRow);
+  });
+}
+
+// Build a priority map from the cross-week highlights table (before it's replaced)
+// Returns Map<normKey → starCount>
+function buildPriorityMap(content) {
+  const map = new Map();
+  let h2 = null, table = null;
+  for (const el of content.children) {
+    if (!h2 && el.tagName === 'H2' && /cross.week/i.test(el.textContent)) { h2 = el; continue; }
+    if (h2 && !table && el.tagName === 'TABLE') { table = el; break; }
+  }
+  if (!table) return map;
+  table.querySelectorAll('tbody tr').forEach(row => {
+    const cells = row.querySelectorAll('td');
+    if (cells.length < 2) return;
+    const stars = (cells[0].textContent.match(/★/g) || []).length;
+    if (!stars) return;
+    map.set(normKey(cells[1].textContent), stars);
+  });
+  return map;
+}
+
+// Transform cross-week highlights table into priority tier cards
+function enhanceCrossWeek(content, titleMap) {
+  let h2 = null, table = null;
+  for (const el of content.children) {
+    if (!h2 && el.tagName === 'H2' && /cross.week/i.test(el.textContent)) { h2 = el; continue; }
+    if (h2 && !table && el.tagName === 'TABLE') { table = el; break; }
+  }
+  if (!table) return;
+
+  const groups = { 3: [], 2: [], 1: [] };
+  table.querySelectorAll('tbody tr').forEach(row => {
+    const cells = row.querySelectorAll('td');
+    if (cells.length < 4) return;
+    const stars = (cells[0].textContent.match(/★/g) || []).length;
+    if (!stars) return;
+    groups[Math.min(stars, 3)].push({
+      title: cells[1].textContent.trim(),
+      day:   cells[2].textContent.trim(),
+      room:  cells[3].textContent.trim(),
+    });
+  });
+
+  const tierCfg = {
+    3: { label: '★★★ Must-see',     bg: 'var(--primary)', color: 'var(--accent)',       border: 'var(--primary)' },
+    2: { label: '★★ High priority', bg: 'var(--primary-light)', color: 'var(--primary)', border: '#a0c4c8' },
+    1: { label: '★ Recommended',    bg: 'var(--bg)',       color: 'var(--text)',          border: 'var(--border)' },
+  };
+
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = 'margin-bottom:8px';
+  [3, 2, 1].forEach(tier => {
+    if (!groups[tier].length) return;
+    const { label, bg, color, border } = tierCfg[tier];
+    const section = document.createElement('div');
+    section.style.cssText = 'margin-bottom:14px';
+    section.innerHTML = `<div style="font-size:.7rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">${label}</div>`;
+    const list = document.createElement('div');
+    list.style.cssText = 'display:flex;flex-direction:column;gap:4px';
+    groups[tier].forEach(({ title, day, room }) => {
+      const url = findUrl(titleMap, title);
+      const item = document.createElement('div');
+      item.style.cssText = `display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;background:${bg};border:1px solid ${border};`;
+      const titleEl = url
+        ? `<a href="${esc(url)}" target="_blank" rel="noopener" style="color:${color};text-decoration:none;border-bottom:1.5px solid var(--accent);padding-bottom:1px;font-weight:600;font-size:.82rem;flex:1;line-height:1.3">${esc(title)}</a>`
+        : `<span style="color:${color};font-weight:600;font-size:.82rem;flex:1;line-height:1.3">${esc(title)}</span>`;
+      item.innerHTML = `${titleEl}
+        <span style="font-size:.7rem;font-weight:600;color:${color};opacity:.75;white-space:nowrap;flex-shrink:0">${esc(day)}</span>`;
+      list.appendChild(item);
+    });
+    section.appendChild(list);
+    wrapper.appendChild(section);
+  });
+  table.replaceWith(wrapper);
+}
+
+function processSchedule() {
+  const content = document.getElementById('schedule-content');
+  const titleMap = buildTitleMap();
+  const priorityMap = buildPriorityMap(content); // parse cross-week table before it's replaced
+
+  // Tag top-level elements and their rows by day
+  let currentDay = '';
+  Array.from(content.children).forEach(el => {
+    if (el.tagName === 'H2') {
+      const t = el.textContent;
+      currentDay = /monday/i.test(t) ? 'Monday' : /tuesday/i.test(t) ? 'Tuesday'
+                 : /wednesday/i.test(t) ? 'Wednesday' : /thursday/i.test(t) ? 'Thursday' : '';
+    }
+    el.dataset.day = currentDay;
+    if (el.querySelectorAll) el.querySelectorAll('tbody tr').forEach(row => {
+      row.dataset.day = currentDay;
+      const text = row.textContent;
+      const rowStars = (text.match(/★/g) || []).length;
+      // Check cross-week priority override for this row's primary talk
+      const strong = row.querySelector('td strong');
+      const overrideStars = strong ? (priorityMap.get(normKey(strong.textContent)) || 0) : 0;
+      row.dataset.stars = Math.max(rowStars, overrideStars);
+      if (/coffee|lunch|break|reception|kubecrawl|evening|dinner/i.test(text)) row.dataset.type = 'break';
+    });
+  });
+
+  injectAbstracts(content);            // collapse abstracts section → inline expand buttons
+  enhanceCrossWeek(content, titleMap); // transform highlights table → tier cards
+  linkScheduleTitles(titleMap);   // link bold titles in tables
+
+  // Build filter bar
+  const existing = document.getElementById('sched-filter-bar');
+  if (existing) existing.remove();
+  const bar = document.createElement('div');
+  bar.id = 'sched-filter-bar';
+  bar.style.cssText = 'display:flex;flex-direction:column;gap:6px;margin-bottom:12px';
+  bar.innerHTML = `
+    <div class="filter-row" style="margin:0">
+      <span style="font-size:.78rem;font-weight:600;color:var(--muted);flex-shrink:0;line-height:28px">Priority:</span>
+      <span class="chip sched-chip" data-stars="1">★ Recommended</span>
+      <span class="chip sched-chip" data-stars="2">★★ High priority</span>
+      <span class="chip sched-chip" data-stars="3">★★★ Must-see</span>
+    </div>
+    <div class="filter-row" style="margin:0">
+      <span style="font-size:.78rem;font-weight:600;color:var(--muted);flex-shrink:0;line-height:28px">Day:</span>
+      <span class="chip day-all sched-day active" data-day="">All days</span>
+      <span class="chip day-mon sched-day" data-day="Monday">Mon 23</span>
+      <span class="chip day-tue sched-day" data-day="Tuesday">Tue 24</span>
+      <span class="chip day-wed sched-day" data-day="Wednesday">Wed 25</span>
+      <span class="chip day-thu sched-day" data-day="Thursday">Thu 26</span>
+    </div>`;
+
+  bar.querySelectorAll('.sched-chip').forEach(chip => {
+    if (schedPriorities.has(parseInt(chip.dataset.stars))) chip.classList.add('active');
+    chip.addEventListener('click', () => {
+      const val = parseInt(chip.dataset.stars);
+      schedPriorities.has(val) ? schedPriorities.delete(val) : schedPriorities.add(val);
+      chip.classList.toggle('active', schedPriorities.has(val));
+      applySchedFilter();
+    });
+  });
+  bar.querySelectorAll('.sched-day').forEach(chip => {
+    if (chip.dataset.day === schedDay) chip.classList.add('active'); else chip.classList.remove('active');
+    chip.addEventListener('click', () => {
+      bar.querySelectorAll('.sched-day').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      schedDay = chip.dataset.day;
+      applySchedFilter();
+    });
+  });
+
+  document.getElementById('schedule-view').insertBefore(bar, content);
+  applySchedFilter();
+}
+
+function applySchedFilter() {
+  const content = document.getElementById('schedule-content');
+
+  // Step 1: day filter — show/hide entire sections
+  Array.from(content.children).forEach(el => {
+    if (!schedDay) { el.style.display = ''; return; }
+    const d = el.dataset.day;
+    el.style.display = (!d || d === schedDay) ? '' : 'none';
+  });
+
+  // Step 2: priority filter — show/hide rows within visible tables
+  content.querySelectorAll('table').forEach(table => {
+    if (table.style.display === 'none') return;
+    table.querySelectorAll('tbody tr').forEach(row => {
+      // Abstract detail rows: reset on every filter change
+      if (row.dataset.isAbstract) {
+        row.style.display = 'none';
+        const prev = row.previousElementSibling;
+        if (prev) { const btn = prev.querySelector('.abs-toggle'); if (btn) btn.textContent = '▼ abstract'; }
+        return;
+      }
+      const stars = parseInt(row.dataset.stars) || 0;
+      const isBreak = row.dataset.type === 'break';
+      row.style.display = (schedPriorities.size === 0 || isBreak || schedPriorities.has(stars)) ? '' : 'none';
+    });
+  });
 }
 
 function clearSearch() {
