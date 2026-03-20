@@ -132,7 +132,6 @@
     .past-toggle input { accent-color: var(--primary); cursor: pointer; }
     .past-toggle.on { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
 
-    .sched-chip.active { background: var(--accent); color: var(--primary); border-color: var(--accent); font-weight: 700; }
 
     /* ── Results meta ────────────────────────────────── */
     .results-meta {
@@ -255,6 +254,8 @@
     .t-cost         { background: #f7fee7; color: #3f6212; }
     .t-backstage    { background: #e0f2fe; color: #0369a1; }
     .t-ai           { background: #f0fdf4; color: #166534; }
+    .t-social       { background: var(--primary-light); color: var(--primary); }
+    .card-type.social { background: var(--accent); color: var(--primary); border-color: var(--accent); }
 
     /* ── Empty state ─────────────────────────────────── */
     .empty {
@@ -343,6 +344,12 @@
     <span class="chip day-thu" data-day="Thursday">Thu 26</span>
   </div>
 
+  <div class="filter-row" id="priority-filters" style="display:none">
+    <span style="font-size:.78rem;font-weight:600;color:var(--muted);flex-shrink:0;line-height:28px">Priority:</span>
+    <span class="chip tag-chip prio-chip" data-prio="1">★ Recommended</span>
+    <span class="chip tag-chip prio-chip" data-prio="2">★★ High priority</span>
+    <span class="chip tag-chip prio-chip" data-prio="3">★★★ Must-see</span>
+  </div>
   <div class="filter-row" id="tag-filters">
     <!-- populated by JS -->
   </div>
@@ -372,6 +379,18 @@
 
 <script>
 // ── Tag config ──────────────────────────────────────────
+// Social / networking events not in sched.com — injected manually
+const SOCIAL_EVENTS = [
+  { day:'Monday',    date:'2026-03-23', time_start:'17:30', time_end:'18:30', type:'social',
+    title:'Evening Reception', speakers:'', orgs:'', room:'Hall 3', track:'', level:'',
+    description:'Opening evening reception after the co-located events day. Connect with the ArgoCon, CiliumCon, and Agentics Day communities.',
+    url:'', tags:['social'], priority:0 },
+  { day:'Tuesday',   date:'2026-03-24', time_start:'17:30', time_end:'19:00', type:'social',
+    title:'KubeCrawl + CloudNativeFest', speakers:'', orgs:'', room:'Exhibition Hall', track:'', level:'',
+    description:'The main KubeCon networking event. Visit sponsor booths, meet project maintainers (Crossplane/Upbound, ArgoCD, Cilium), and connect with the cloud native community.',
+    url:'https://kccnceu2026.sched.com', tags:['social'], priority:0 },
+];
+
 const TAG_LABELS = {
   'argocd':        '⚙ ArgoCD',
   'crossplane':    '🔧 Crossplane',
@@ -395,6 +414,7 @@ const TAG_LABELS = {
   'cost':          '💰 Cost',
   'backstage':     '🎭 Backstage',
   'ai':            '✨ AI/ML',
+  'social':        '🍻 Social/Networking',
 };
 
 // Priority order for tag display
@@ -402,7 +422,7 @@ const TAG_ORDER = [
   'argocd','crossplane','terraform','mcp','ai-agents','platform-eng',
   'keycloak','otel','gitops','cilium','multi-tenancy','policy','opa',
   'cert-manager','helm','identity','cost','security','observability',
-  'networking','backstage','ai'
+  'networking','backstage','ai','social'
 ];
 
 // ── State ───────────────────────────────────────────────
@@ -414,8 +434,8 @@ let currentTab = 'talks';
 let scheduleLoaded = false;
 let debounceTimer = null;
 let hidePast = false;
-let schedPriorities = new Set(); // empty = show all
-let schedDay = '';              // empty = all days
+let selectedPriorities = new Set(); // talks tab priority filter
+let schedDay = '';  // schedule tab day filter
 
 const CONF_DATES = { Monday:'2026-03-23', Tuesday:'2026-03-24', Wednesday:'2026-03-25', Thursday:'2026-03-26' };
 
@@ -427,7 +447,9 @@ function isPast(t) {
 
 // ── Init ────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+  TALKS_DATA.push(...SOCIAL_EVENTS);
   buildTagFilters();
+  loadPriorities();
   render();
   document.getElementById('talk-count-badge').textContent = TALKS_DATA.length + ' talks';
 
@@ -465,6 +487,16 @@ document.addEventListener('DOMContentLoaded', () => {
     render();
   });
 
+  // Priority filter chips
+  document.getElementById('priority-filters').addEventListener('click', (e) => {
+    const chip = e.target.closest('.prio-chip');
+    if (!chip) return;
+    const val = parseInt(chip.dataset.prio);
+    selectedPriorities.has(val) ? selectedPriorities.delete(val) : selectedPriorities.add(val);
+    chip.classList.toggle('active', selectedPriorities.has(val));
+    render();
+  });
+
   // Hide past toggle
   document.getElementById('hide-past').addEventListener('change', (e) => {
     hidePast = e.target.checked;
@@ -477,6 +509,40 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('scroll-top').classList.toggle('visible', window.scrollY > 400);
   }, { passive: true });
 });
+
+// ── Priority loading ──────────────────────────────────────
+function loadPriorities() {
+  fetch('schedule.md')
+    .then(r => r.text())
+    .then(text => {
+      // Parse cross-week highlights: | ★★ | Title | Day | Room |
+      const priorityMap = new Map();
+      let inSection = false;
+      text.split('\n').forEach(line => {
+        if (/cross.week highlights/i.test(line)) { inSection = true; return; }
+        if (inSection && /^##\s/.test(line)) { inSection = false; return; }
+        if (!inSection) return;
+        const m = line.match(/^\|\s*(★+)\s*\|\s*(.+?)\s*\|/);
+        if (m) priorityMap.set(normKey(m[2]), m[1].length);
+      });
+
+      // Stamp .priority onto every TALKS_DATA entry
+      TALKS_DATA.forEach(t => {
+        const key = normKey(t.title);
+        let p = priorityMap.get(key) || 0;
+        if (!p) {
+          for (const [k, v] of priorityMap) {
+            if (key.length > 10 && k.length > 10 && key.slice(0, 28) === k.slice(0, 28)) { p = v; break; }
+          }
+        }
+        t.priority = p;
+      });
+
+      document.getElementById('priority-filters').style.display = '';
+      render();
+    })
+    .catch(() => {}); // silently skip if offline
+}
 
 function buildTagFilters() {
   const wrap = document.getElementById('tag-filters');
@@ -496,6 +562,7 @@ function filterTalks() {
   const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
   return TALKS_DATA.filter(t => {
     if (hidePast && isPast(t)) return false;
+    if (selectedPriorities.size > 0 && !selectedPriorities.has(t.priority || 0)) return false;
     if (selectedDay && t.day !== selectedDay) return false;
     if (selectedTags.size > 0 && !t.tags.some(tag => selectedTags.has(tag))) return false;
     if (terms.length > 0) {
@@ -597,6 +664,13 @@ function cardHTML(t) {
 
   const levelBadge = t.level ? `<span class="card-type" style="margin-left:4px">${esc(t.level)}</span>` : '';
 
+  const prio = t.priority || 0;
+  const prioBadge = prio ? `<span style="
+    display:inline-flex;align-items:center;padding:2px 7px;border-radius:4px;
+    font-size:.72rem;font-weight:800;letter-spacing:.02em;margin-left:4px;
+    background:var(--accent);color:var(--primary);border:1px solid var(--accent)
+  ">${'★'.repeat(prio)}</span>` : '';
+
   return `
   <div class="card${isExpanded ? ' expanded' : ''}" data-id="${esc(id)}">
     <div class="card-header day-${esc(t.day)}">
@@ -605,6 +679,7 @@ function cardHTML(t) {
         <div>
           <span class="card-type ${esc(t.type)}">${esc(t.type?.replace(/_/g,' '))}</span>
           ${levelBadge}
+          ${prioBadge}
         </div>
       </div>
       <div class="card-title">${highlight(t.title, terms)}</div>
@@ -864,12 +939,6 @@ function processSchedule() {
   bar.style.cssText = 'display:flex;flex-direction:column;gap:6px;margin-bottom:12px';
   bar.innerHTML = `
     <div class="filter-row" style="margin:0">
-      <span style="font-size:.78rem;font-weight:600;color:var(--muted);flex-shrink:0;line-height:28px">Priority:</span>
-      <span class="chip sched-chip" data-stars="1">★ Recommended</span>
-      <span class="chip sched-chip" data-stars="2">★★ High priority</span>
-      <span class="chip sched-chip" data-stars="3">★★★ Must-see</span>
-    </div>
-    <div class="filter-row" style="margin:0">
       <span style="font-size:.78rem;font-weight:600;color:var(--muted);flex-shrink:0;line-height:28px">Day:</span>
       <span class="chip day-all sched-day active" data-day="">All days</span>
       <span class="chip day-mon sched-day" data-day="Monday">Mon 23</span>
@@ -878,15 +947,6 @@ function processSchedule() {
       <span class="chip day-thu sched-day" data-day="Thursday">Thu 26</span>
     </div>`;
 
-  bar.querySelectorAll('.sched-chip').forEach(chip => {
-    if (schedPriorities.has(parseInt(chip.dataset.stars))) chip.classList.add('active');
-    chip.addEventListener('click', () => {
-      const val = parseInt(chip.dataset.stars);
-      schedPriorities.has(val) ? schedPriorities.delete(val) : schedPriorities.add(val);
-      chip.classList.toggle('active', schedPriorities.has(val));
-      applySchedFilter();
-    });
-  });
   bar.querySelectorAll('.sched-day').forEach(chip => {
     if (chip.dataset.day === schedDay) chip.classList.add('active'); else chip.classList.remove('active');
     chip.addEventListener('click', () => {
@@ -911,21 +971,11 @@ function applySchedFilter() {
     el.style.display = (!d || d === schedDay) ? '' : 'none';
   });
 
-  // Step 2: priority filter — show/hide rows within visible tables
-  content.querySelectorAll('table').forEach(table => {
-    if (table.style.display === 'none') return;
-    table.querySelectorAll('tbody tr').forEach(row => {
-      // Abstract detail rows: reset on every filter change
-      if (row.dataset.isAbstract) {
-        row.style.display = 'none';
-        const prev = row.previousElementSibling;
-        if (prev) { const btn = prev.querySelector('.abs-toggle'); if (btn) btn.textContent = '▼ abstract'; }
-        return;
-      }
-      const stars = parseInt(row.dataset.stars) || 0;
-      const isBreak = row.dataset.type === 'break';
-      row.style.display = (schedPriorities.size === 0 || isBreak || schedPriorities.has(stars)) ? '' : 'none';
-    });
+  // Step 2: reset abstract detail rows on day change
+  content.querySelectorAll('.abstract-row').forEach(row => {
+    row.style.display = 'none';
+    const prev = row.previousElementSibling;
+    if (prev) { const btn = prev.querySelector('.abs-toggle'); if (btn) btn.textContent = '▼ abstract'; }
   });
 }
 
