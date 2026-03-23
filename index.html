@@ -5,8 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#213A3E">
   <title>KubeCon EU 2026 · Talk Browser</title>
-  <script src="data.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="data.js?v=2"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -49,20 +48,6 @@
     }
     .header-top h1 { font-size: 1.1rem; font-weight: 700; }
     .header-top .subtitle { font-size: .75rem; color: var(--accent); margin-top: 1px; opacity: .85; }
-
-    /* ── Tabs ────────────────────────────────────────── */
-    .tabs {
-      display: flex; border-top: 1px solid rgba(255,255,255,.15);
-    }
-    .tab-btn {
-      flex: 1; padding: 10px 8px; background: none; border: none;
-      color: rgba(242,241,231,.6); font-size: .85rem; font-weight: 600;
-      cursor: pointer; border-bottom: 3px solid transparent;
-      transition: color .15s, border-color .15s;
-    }
-    .tab-btn.active {
-      color: var(--accent); border-bottom-color: var(--accent);
-    }
 
     /* ── Search + filters ────────────────────────────── */
     .controls {
@@ -264,36 +249,6 @@
     .empty .icon { font-size: 3rem; margin-bottom: 12px; }
     .empty h3 { font-size: 1rem; margin-bottom: 6px; }
 
-    /* ── Schedule view ───────────────────────────────── */
-    #schedule-view {
-      display: none; padding: 16px 16px 80px;
-      max-width: 900px; margin: 0 auto;
-    }
-    #schedule-content { background: var(--surface); border-radius: var(--radius);
-      border: 1px solid var(--border); padding: 20px 16px; box-shadow: var(--shadow); }
-    #schedule-content h1 { font-size: 1.3rem; margin-bottom: 8px; }
-    #schedule-content h2 { font-size: 1.1rem; margin: 24px 0 10px; padding-bottom: 6px;
-      border-bottom: 3px solid var(--accent); color: var(--primary); }
-    #schedule-content h3 { font-size: .95rem; margin: 16px 0 8px; color: var(--text); }
-    #schedule-content h4 { font-size: .85rem; margin: 12px 0 6px; color: var(--muted); }
-    #schedule-content p { font-size: .85rem; line-height: 1.6; margin-bottom: 8px; color: var(--text); }
-    #schedule-content ul, #schedule-content ol { padding-left: 20px; font-size: .85rem; line-height: 1.6; margin-bottom: 8px; }
-    #schedule-content li { margin-bottom: 2px; }
-    #schedule-content table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: .8rem; overflow-x: auto; display: block; }
-    #schedule-content th { background: var(--primary); color: var(--accent); padding: 8px 10px; text-align: left;
-      border: 1px solid var(--border); font-weight: 700; }
-    #schedule-content td { padding: 7px 10px; border: 1px solid var(--border); vertical-align: top; }
-    #schedule-content tr:nth-child(even) td { background: var(--bg); }
-    #schedule-content code { font-family: 'SF Mono', 'Fira Code', monospace; font-size: .8em;
-      background: var(--bg); padding: 1px 4px; border-radius: 3px; }
-    #schedule-content blockquote { border-left: 3px solid var(--primary); padding: 6px 12px;
-      margin: 10px 0; background: var(--bg); border-radius: 0 6px 6px 0; }
-    #schedule-content blockquote p { margin-bottom: 0; }
-    #schedule-content strong { font-weight: 700; }
-    #schedule-content a { color: var(--primary); }
-    #schedule-content hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
-
-
     /* ── Loading spinner ─────────────────────────────── */
     #loader { text-align: center; padding: 60px; color: var(--muted); display: none; }
 
@@ -309,6 +264,38 @@
       justify-content: center; z-index: 50;
     }
     #scroll-top.visible { display: flex; }
+
+    /* ── Venue map modal ─────────────────────────────── */
+    #map-btn {
+      position: fixed; bottom: calc(env(safe-area-inset-bottom, 0px) + 16px); left: 16px;
+      height: 44px; padding: 0 16px; border-radius: 22px;
+      background: var(--primary); color: var(--accent);
+      border: 2px solid var(--accent); cursor: pointer;
+      font-size: .85rem; font-weight: 700; z-index: 50;
+      box-shadow: 0 4px 12px rgba(33,58,62,.4);
+      display: flex; align-items: center; gap: 6px;
+    }
+    #map-modal {
+      display: none; position: fixed; inset: 0; z-index: 200;
+      background: rgba(33,58,62,.7); backdrop-filter: blur(4px);
+      align-items: flex-end;
+    }
+    #map-modal.open { display: flex; }
+    #map-sheet {
+      width: 100%; height: 90vh; background: var(--surface);
+      border-radius: 16px 16px 0 0; overflow: hidden;
+      display: flex; flex-direction: column;
+    }
+    #map-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px; background: var(--primary); color: var(--accent);
+      font-weight: 700; font-size: .9rem; flex-shrink: 0;
+    }
+    #map-header button {
+      background: none; border: none; color: var(--accent);
+      font-size: 1.3rem; cursor: pointer; line-height: 1; padding: 0 4px;
+    }
+    #map-frame { flex: 1; width: 100%; border: none; }
   </style>
 </head>
 <body>
@@ -321,10 +308,6 @@
     </div>
     <div id="talk-count-badge" style="font-size:.75rem;opacity:.8;font-weight:600;"></div>
   </div>
-  <nav class="tabs">
-    <button class="tab-btn active" onclick="showTab('talks')">🔍 Talks</button>
-    <button class="tab-btn" onclick="showTab('schedule')">📅 Schedule</button>
-  </nav>
 </header>
 
 <div class="controls" id="talks-controls">
@@ -344,18 +327,20 @@
     <span class="chip day-thu" data-day="Thursday">Thu 26</span>
   </div>
 
-  <div class="filter-row" id="priority-filters" style="display:none">
-    <span style="font-size:.78rem;font-weight:600;color:var(--muted);flex-shrink:0;line-height:28px">Priority:</span>
-    <span class="chip tag-chip prio-chip" data-prio="1">★ Recommended</span>
-    <span class="chip tag-chip prio-chip" data-prio="2">★★ High priority</span>
+  <div class="filter-row" id="priority-filters">
+    <span class="chip tag-chip prio-chip" data-prio="1">★ Others</span>
+    <span class="chip tag-chip prio-chip" data-prio="2">★★ Recommended</span>
     <span class="chip tag-chip prio-chip" data-prio="3">★★★ Must-see</span>
   </div>
   <div class="filter-row" id="tag-filters">
     <!-- populated by JS -->
   </div>
+  <div class="filter-row" id="room-filters">
+    <!-- populated by JS -->
+  </div>
   <div style="padding-top:6px">
-    <label class="past-toggle" id="hide-past-label">
-      <input type="checkbox" id="hide-past"> Hide past talks
+    <label class="past-toggle on" id="hide-past-label">
+      <input type="checkbox" id="hide-past" checked> Hide past talks
     </label>
   </div>
 </div>
@@ -371,11 +356,19 @@
   </div>
 </div>
 
-<div id="schedule-view">
-  <div id="schedule-content">Loading schedule…</div>
-</div>
-
 <button id="scroll-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="Back to top">↑</button>
+
+<button id="map-btn" onclick="openMap()">📍 Venue Map</button>
+
+<div id="map-modal" onclick="closeMap(event)">
+  <div id="map-sheet">
+    <div id="map-header">
+      <span>📍 RAI Amsterdam — Venue Map</span>
+      <button onclick="closeMap()" aria-label="Close">✕</button>
+    </div>
+    <iframe id="map-frame" src="" title="Venue Map"></iframe>
+  </div>
+</div>
 
 <script>
 // ── Tag config ──────────────────────────────────────────
@@ -430,12 +423,10 @@ let query = '';
 let selectedDay = '';
 let selectedTags = new Set();
 let expandedCards = new Set();
-let currentTab = 'talks';
-let scheduleLoaded = false;
 let debounceTimer = null;
-let hidePast = false;
-let selectedPriorities = new Set(); // talks tab priority filter
-let schedDay = '';  // schedule tab day filter
+let hidePast = true;
+let selectedRoom = '';
+let selectedPriorities = new Set();
 
 const CONF_DATES = { Monday:'2026-03-23', Tuesday:'2026-03-24', Wednesday:'2026-03-25', Thursday:'2026-03-26' };
 
@@ -448,8 +439,10 @@ function isPast(t) {
 // ── Init ────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   TALKS_DATA.push(...SOCIAL_EVENTS);
+  // Default unranked talks to ★ (priority already baked into data.js for curated picks)
+  TALKS_DATA.forEach(t => { if (!t.priority) t.priority = 1; });
   buildTagFilters();
-  loadPriorities();
+  buildRoomFilters();
   render();
   document.getElementById('talk-count-badge').textContent = TALKS_DATA.length + ' talks';
 
@@ -487,6 +480,16 @@ document.addEventListener('DOMContentLoaded', () => {
     render();
   });
 
+  // Room filter chips
+  document.getElementById('room-filters').addEventListener('click', (e) => {
+    const chip = e.target.closest('.room-chip');
+    if (!chip) return;
+    document.querySelectorAll('.room-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    selectedRoom = chip.dataset.room;
+    render();
+  });
+
   // Priority filter chips
   document.getElementById('priority-filters').addEventListener('click', (e) => {
     const chip = e.target.closest('.prio-chip');
@@ -510,49 +513,32 @@ document.addEventListener('DOMContentLoaded', () => {
   }, { passive: true });
 });
 
-// ── Priority loading ──────────────────────────────────────
-function loadPriorities() {
-  fetch('schedule.md')
-    .then(r => r.text())
-    .then(text => {
-      // Parse cross-week highlights: | ★★ | Title | Day | Room |
-      const priorityMap = new Map();
-      let inSection = false;
-      text.split('\n').forEach(line => {
-        if (/cross.week highlights/i.test(line)) { inSection = true; return; }
-        if (inSection && /^##\s/.test(line)) { inSection = false; return; }
-        if (!inSection) return;
-        const m = line.match(/^\|\s*(★+)\s*\|\s*(.+?)\s*\|/);
-        if (m) priorityMap.set(normKey(m[2]), m[1].length);
-      });
-
-      // Stamp .priority onto every TALKS_DATA entry
-      TALKS_DATA.forEach(t => {
-        const key = normKey(t.title);
-        let p = priorityMap.get(key) || 0;
-        if (!p) {
-          for (const [k, v] of priorityMap) {
-            if (key.length > 10 && k.length > 10 && key.slice(0, 28) === k.slice(0, 28)) { p = v; break; }
-          }
-        }
-        t.priority = p;
-      });
-
-      document.getElementById('priority-filters').style.display = '';
-      render();
-    })
-    .catch(() => {}); // silently skip if offline
-}
-
 function buildTagFilters() {
   const wrap = document.getElementById('tag-filters');
-  // Get tags that actually exist in data
   const existing = new Set(TALKS_DATA.flatMap(t => t.tags));
   TAG_ORDER.filter(t => existing.has(t)).forEach(tag => {
     const chip = document.createElement('span');
     chip.className = 'chip tag-chip';
     chip.dataset.tag = tag;
     chip.textContent = TAG_LABELS[tag] || '#' + tag;
+    wrap.appendChild(chip);
+  });
+}
+
+function buildRoomFilters() {
+  const wrap = document.getElementById('room-filters');
+  const rooms = [...new Set(TALKS_DATA.map(t => t.room).filter(Boolean))].sort();
+  // "All" chip
+  const all = document.createElement('span');
+  all.className = 'chip tag-chip room-chip active';
+  all.dataset.room = '';
+  all.textContent = '📍 All rooms';
+  wrap.appendChild(all);
+  rooms.forEach(room => {
+    const chip = document.createElement('span');
+    chip.className = 'chip tag-chip room-chip';
+    chip.dataset.room = room;
+    chip.textContent = room;
     wrap.appendChild(chip);
   });
 }
@@ -564,6 +550,7 @@ function filterTalks() {
     if (hidePast && isPast(t)) return false;
     if (selectedPriorities.size > 0 && !selectedPriorities.has(t.priority || 0)) return false;
     if (selectedDay && t.day !== selectedDay) return false;
+    if (selectedRoom && t.room !== selectedRoom) return false;
     if (selectedTags.size > 0 && !t.tags.some(tag => selectedTags.has(tag))) return false;
     if (terms.length > 0) {
       const hay = `${t.title} ${t.description} ${t.speakers} ${t.orgs} ${t.room} ${t.tags.join(' ')}`.toLowerCase();
@@ -697,287 +684,20 @@ function cardHTML(t) {
   </div>`;
 }
 
-// ── Tab switching ─────────────────────────────────────────
-function showTab(tab) {
-  currentTab = tab;
-  document.querySelectorAll('.tab-btn').forEach((b, i) => {
-    b.classList.toggle('active', (i === 0) === (tab === 'talks'));
-  });
-  document.getElementById('talks-view').style.display = tab === 'talks' ? 'block' : 'none';
-  document.getElementById('talks-controls').style.display = tab === 'talks' ? 'block' : 'none';
-  document.getElementById('results-meta').style.display = tab === 'talks' ? 'block' : 'none';
-  document.getElementById('schedule-view').style.display = tab === 'schedule' ? 'block' : 'none';
 
-  if (tab === 'schedule' && !scheduleLoaded) loadSchedule();
+const MAP_URL = 'https://events.linuxfoundation.org/wp-content/uploads/2026/03/KCEU26-VenueMap.pdf';
+function openMap() {
+  const frame = document.getElementById('map-frame');
+  if (!frame.src || frame.src === window.location.href) frame.src = MAP_URL;
+  document.getElementById('map-modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
 }
-
-function loadSchedule() {
-  scheduleLoaded = true;
-  fetch('schedule.md')
-    .then(r => r.text())
-    .then(md => {
-      // Add anchor IDs to day headings
-      md = md.replace(/^## (Monday.*)$/m, '<a name="monday"></a>\n## $1')
-             .replace(/^## (Tuesday.*)$/m, '<a name="tuesday"></a>\n## $1')
-             .replace(/^## (Wednesday.*)$/m, '<a name="wednesday"></a>\n## $1')
-             .replace(/^## (Thursday.*)$/m, '<a name="thursday"></a>\n## $1');
-      document.getElementById('schedule-content').innerHTML = marked.parse(md);
-      processSchedule();
-    })
-    .catch(() => {
-      document.getElementById('schedule-content').innerHTML =
-        '<p>Could not load schedule. <a href="schedule.md">View raw file</a></p>';
-    });
+function closeMap(e) {
+  if (e && e.target !== document.getElementById('map-modal')) return;
+  document.getElementById('map-modal').classList.remove('open');
+  document.body.style.overflow = '';
 }
-
-// ── Schedule interactivity ────────────────────────────────
-function normKey(s) {
-  return s.replace(/★+\s*/g, '').replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
-}
-
-function buildTitleMap() {
-  const map = new Map();
-  TALKS_DATA.forEach(t => {
-    if (t.url) map.set(normKey(t.title), t.url);
-  });
-  return map;
-}
-
-function findUrl(titleMap, text) {
-  const key = normKey(text);
-  if (titleMap.has(key)) return titleMap.get(key);
-  for (const [k, v] of titleMap) {
-    const len = Math.min(32, key.length, k.length);
-    if (len > 12 && key.slice(0, len) === k.slice(0, len)) return v;
-  }
-  return null;
-}
-
-// Link bold talk titles in table cells to sched.com
-function linkScheduleTitles(titleMap) {
-  document.querySelectorAll('#schedule-content td strong').forEach(strong => {
-    if (strong.querySelector('a')) return;
-    const url = findUrl(titleMap, strong.textContent);
-    if (!url) return;
-    const a = document.createElement('a');
-    a.href = url; a.target = '_blank'; a.rel = 'noopener';
-    a.style.cssText = 'color:inherit;text-decoration:none;border-bottom:1.5px solid var(--accent);padding-bottom:1px';
-    while (strong.firstChild) a.appendChild(strong.firstChild);
-    strong.appendChild(a);
-  });
-}
-
-// Extract abstracts section → inject as expandable rows into day tables
-function injectAbstracts(content) {
-  const abstractMap = new Map();
-  let inAbstracts = false;
-  let currentKey = null;
-  const toHide = [];
-
-  Array.from(content.children).forEach(el => {
-    if (el.tagName === 'H2' && /verified talk abstracts/i.test(el.textContent)) {
-      inAbstracts = true; toHide.push(el); return;
-    }
-    if (!inAbstracts) return;
-    if (/report generated/i.test(el.textContent)) return; // keep footer
-    toHide.push(el);
-    if (el.tagName === 'P' && el.querySelector('strong')) {
-      currentKey = normKey(el.querySelector('strong').textContent);
-    } else if (el.tagName === 'BLOCKQUOTE' && currentKey) {
-      abstractMap.set(currentKey, el.innerHTML);
-      currentKey = null;
-    }
-  });
-  toHide.forEach(el => el.style.display = 'none');
-
-  // Inject into day table rows
-  content.querySelectorAll('tbody tr[data-stars]').forEach(row => {
-    if (parseInt(row.dataset.stars) === 0) return;
-    const strong = row.querySelector('td strong');
-    if (!strong) return;
-    const abstract = abstractMap.get(normKey(strong.textContent))
-      || (() => { for (const [k,v] of abstractMap) { if (normKey(strong.textContent).slice(0,28) === k.slice(0,28) && k.length > 12) return v; } })();
-    if (!abstract) return;
-
-    const colCount = row.querySelectorAll('td').length;
-    const detailRow = document.createElement('tr');
-    detailRow.className = 'abstract-row';
-    detailRow.dataset.day = row.dataset.day || '';
-    detailRow.dataset.isAbstract = '1';
-    detailRow.style.display = 'none';
-    detailRow.innerHTML = `<td colspan="${colCount}" style="padding:0 0 6px 0;border-top:none">
-      <div style="border-left:3px solid var(--accent);margin:0 8px;padding:8px 12px;background:var(--bg);font-size:.8rem;color:var(--muted);line-height:1.6;border-radius:0 0 6px 6px">${abstract}</div>
-    </td>`;
-
-    const btn = document.createElement('button');
-    btn.className = 'abs-toggle';
-    btn.textContent = '▼ abstract';
-    btn.style.cssText = 'display:inline-block;margin-top:3px;background:none;border:none;cursor:pointer;color:var(--muted);font-size:.68rem;font-weight:700;padding:0;letter-spacing:.03em;text-transform:uppercase;opacity:.8';
-    btn.addEventListener('click', e => {
-      e.stopPropagation();
-      const open = detailRow.style.display !== 'none';
-      detailRow.style.display = open ? 'none' : '';
-      btn.textContent = open ? '▼ abstract' : '▲ abstract';
-    });
-
-    const titleCell = row.querySelector('td:nth-child(2)') || row.querySelector('td');
-    if (titleCell) titleCell.appendChild(btn);
-    row.insertAdjacentElement('afterend', detailRow);
-  });
-}
-
-// Build a priority map from the cross-week highlights table (before it's replaced)
-// Returns Map<normKey → starCount>
-function buildPriorityMap(content) {
-  const map = new Map();
-  let h2 = null, table = null;
-  for (const el of content.children) {
-    if (!h2 && el.tagName === 'H2' && /cross.week/i.test(el.textContent)) { h2 = el; continue; }
-    if (h2 && !table && el.tagName === 'TABLE') { table = el; break; }
-  }
-  if (!table) return map;
-  table.querySelectorAll('tbody tr').forEach(row => {
-    const cells = row.querySelectorAll('td');
-    if (cells.length < 2) return;
-    const stars = (cells[0].textContent.match(/★/g) || []).length;
-    if (!stars) return;
-    map.set(normKey(cells[1].textContent), stars);
-  });
-  return map;
-}
-
-// Transform cross-week highlights table into priority tier cards
-function enhanceCrossWeek(content, titleMap) {
-  let h2 = null, table = null;
-  for (const el of content.children) {
-    if (!h2 && el.tagName === 'H2' && /cross.week/i.test(el.textContent)) { h2 = el; continue; }
-    if (h2 && !table && el.tagName === 'TABLE') { table = el; break; }
-  }
-  if (!table) return;
-
-  const groups = { 3: [], 2: [], 1: [] };
-  table.querySelectorAll('tbody tr').forEach(row => {
-    const cells = row.querySelectorAll('td');
-    if (cells.length < 4) return;
-    const stars = (cells[0].textContent.match(/★/g) || []).length;
-    if (!stars) return;
-    groups[Math.min(stars, 3)].push({
-      title: cells[1].textContent.trim(),
-      day:   cells[2].textContent.trim(),
-      room:  cells[3].textContent.trim(),
-    });
-  });
-
-  const tierCfg = {
-    3: { label: '★★★ Must-see',     bg: 'var(--primary)', color: 'var(--accent)',       border: 'var(--primary)' },
-    2: { label: '★★ High priority', bg: 'var(--primary-light)', color: 'var(--primary)', border: '#a0c4c8' },
-    1: { label: '★ Recommended',    bg: 'var(--bg)',       color: 'var(--text)',          border: 'var(--border)' },
-  };
-
-  const wrapper = document.createElement('div');
-  wrapper.style.cssText = 'margin-bottom:8px';
-  [3, 2, 1].forEach(tier => {
-    if (!groups[tier].length) return;
-    const { label, bg, color, border } = tierCfg[tier];
-    const section = document.createElement('div');
-    section.style.cssText = 'margin-bottom:14px';
-    section.innerHTML = `<div style="font-size:.7rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">${label}</div>`;
-    const list = document.createElement('div');
-    list.style.cssText = 'display:flex;flex-direction:column;gap:4px';
-    groups[tier].forEach(({ title, day, room }) => {
-      const url = findUrl(titleMap, title);
-      const item = document.createElement('div');
-      item.style.cssText = `display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;background:${bg};border:1px solid ${border};`;
-      const titleEl = url
-        ? `<a href="${esc(url)}" target="_blank" rel="noopener" style="color:${color};text-decoration:none;border-bottom:1.5px solid var(--accent);padding-bottom:1px;font-weight:600;font-size:.82rem;flex:1;line-height:1.3">${esc(title)}</a>`
-        : `<span style="color:${color};font-weight:600;font-size:.82rem;flex:1;line-height:1.3">${esc(title)}</span>`;
-      item.innerHTML = `${titleEl}
-        <span style="font-size:.7rem;font-weight:600;color:${color};opacity:.75;white-space:nowrap;flex-shrink:0">${esc(day)}</span>`;
-      list.appendChild(item);
-    });
-    section.appendChild(list);
-    wrapper.appendChild(section);
-  });
-  table.replaceWith(wrapper);
-}
-
-function processSchedule() {
-  const content = document.getElementById('schedule-content');
-  const titleMap = buildTitleMap();
-  const priorityMap = buildPriorityMap(content); // parse cross-week table before it's replaced
-
-  // Tag top-level elements and their rows by day
-  let currentDay = '';
-  Array.from(content.children).forEach(el => {
-    if (el.tagName === 'H2') {
-      const t = el.textContent;
-      currentDay = /monday/i.test(t) ? 'Monday' : /tuesday/i.test(t) ? 'Tuesday'
-                 : /wednesday/i.test(t) ? 'Wednesday' : /thursday/i.test(t) ? 'Thursday' : '';
-    }
-    el.dataset.day = currentDay;
-    if (el.querySelectorAll) el.querySelectorAll('tbody tr').forEach(row => {
-      row.dataset.day = currentDay;
-      const text = row.textContent;
-      const rowStars = (text.match(/★/g) || []).length;
-      // Check cross-week priority override for this row's primary talk
-      const strong = row.querySelector('td strong');
-      const overrideStars = strong ? (priorityMap.get(normKey(strong.textContent)) || 0) : 0;
-      row.dataset.stars = Math.max(rowStars, overrideStars);
-      if (/coffee|lunch|break|reception|kubecrawl|evening|dinner/i.test(text)) row.dataset.type = 'break';
-    });
-  });
-
-  injectAbstracts(content);            // collapse abstracts section → inline expand buttons
-  enhanceCrossWeek(content, titleMap); // transform highlights table → tier cards
-  linkScheduleTitles(titleMap);   // link bold titles in tables
-
-  // Build filter bar
-  const existing = document.getElementById('sched-filter-bar');
-  if (existing) existing.remove();
-  const bar = document.createElement('div');
-  bar.id = 'sched-filter-bar';
-  bar.style.cssText = 'display:flex;flex-direction:column;gap:6px;margin-bottom:12px';
-  bar.innerHTML = `
-    <div class="filter-row" style="margin:0">
-      <span style="font-size:.78rem;font-weight:600;color:var(--muted);flex-shrink:0;line-height:28px">Day:</span>
-      <span class="chip day-all sched-day active" data-day="">All days</span>
-      <span class="chip day-mon sched-day" data-day="Monday">Mon 23</span>
-      <span class="chip day-tue sched-day" data-day="Tuesday">Tue 24</span>
-      <span class="chip day-wed sched-day" data-day="Wednesday">Wed 25</span>
-      <span class="chip day-thu sched-day" data-day="Thursday">Thu 26</span>
-    </div>`;
-
-  bar.querySelectorAll('.sched-day').forEach(chip => {
-    if (chip.dataset.day === schedDay) chip.classList.add('active'); else chip.classList.remove('active');
-    chip.addEventListener('click', () => {
-      bar.querySelectorAll('.sched-day').forEach(c => c.classList.remove('active'));
-      chip.classList.add('active');
-      schedDay = chip.dataset.day;
-      applySchedFilter();
-    });
-  });
-
-  document.getElementById('schedule-view').insertBefore(bar, content);
-  applySchedFilter();
-}
-
-function applySchedFilter() {
-  const content = document.getElementById('schedule-content');
-
-  // Step 1: day filter — show/hide entire sections
-  Array.from(content.children).forEach(el => {
-    if (!schedDay) { el.style.display = ''; return; }
-    const d = el.dataset.day;
-    el.style.display = (!d || d === schedDay) ? '' : 'none';
-  });
-
-  // Step 2: reset abstract detail rows on day change
-  content.querySelectorAll('.abstract-row').forEach(row => {
-    row.style.display = 'none';
-    const prev = row.previousElementSibling;
-    if (prev) { const btn = prev.querySelector('.abs-toggle'); if (btn) btn.textContent = '▼ abstract'; }
-  });
-}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMap(); });
 
 function clearSearch() {
   document.getElementById('search').value = '';

@@ -147,6 +147,7 @@ Thursday is a half-day ending ~15:45 — no padding. The morning keynote block c
 | Priority | Talk | Day | Room |
 |----------|------|-----|------|
 | ★★★ | The 10x DevOps Engineer's Toolkit: Argo CD + AI-Driven MCP Automation | Tue or Wed | Amtrium 1+2 |
+| ★★★ | Choose Your Own Adventure: AI Meets Internal Developer Platform | Tue | Hall 7 \| Room A |
 | ★★★ | Agentics Day: MCP in 2026 | Mon | Hall 7 Room A |
 | ★★★ | From Cloud-Native Apps to Cloud-Native Platforms (Keynote) | Thu | Hall 12 |
 | ★★★ | AI Agents & Platform Engineering (Panel) | Thu | Auditorium |
@@ -159,12 +160,16 @@ Thursday is a half-day ending ~15:45 — no padding. The morning keynote block c
 | ★★ | Cert-manager Project Update | Thu | G102-103 |
 | ★★ | Three Shades of Isolation: Multi-tenancy Fortress | Thu | Hall 8 Room G |
 | ★★ | Is AIOps the Future of Operations? (Agentics Day) | Mon | Hall 7 Room A |
+| ★★ | Scaling on Satisfaction: Automated Rollouts Driven by User Feedback | Mon | Hall 8 \| Room G |
+| ★★ | When the Codebase Starts Instrumenting Itself | Mon | E103-105 |
+| ★★ | Contribfest: Tell Us How You're Using Argo CD: A Community ContribFest Session | Wed | G106 |
 | ★ | OPA Intro & Deep Dive | Wed | E103-105 |
 | ★ | Least-Privilege for AI: Authorizing Agents and MCP Tools | Tue | Hall 8 Room F |
 | ★ | OpenTelemetry Profiling (Fourth Pillar) | Thu | Hall 8 Room F |
 | ★ | Secure Your MCP Servers | Mon | Hall 8 Room D |
 | ★ | Testing IaC: OpenTofu + Localstack | Mon | Emerald Room |
 | ★ | AI-Enabled Crossplane Control Planes (Millennium bcp) | Tue | Hall 8 Room D |
+| ★ | Contribfest: Dive Into cert-manager and Start Contributing! | Tue | G106 |
 
 ---
 
