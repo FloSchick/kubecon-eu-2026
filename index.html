@@ -39,7 +39,6 @@
       background: var(--primary);
       color: #F2F1E7;
       padding: env(safe-area-inset-top, 0) 0 0;
-      position: sticky; top: 0; z-index: 100;
       border-bottom: 3px solid var(--accent);
     }
     .header-top {
@@ -49,12 +48,27 @@
     .header-top h1 { font-size: 1.1rem; font-weight: 700; }
     .header-top .subtitle { font-size: .75rem; color: var(--accent); margin-top: 1px; opacity: .85; }
 
+    /* ── Sticky top wrapper (header + controls move as one) */
+    #sticky-top {
+      position: sticky; top: 0; z-index: 100;
+    }
+
     /* ── Search + filters ────────────────────────────── */
     .controls {
       background: var(--surface);
       border-bottom: 1px solid var(--border);
-      padding: 10px 12px 8px;
-      position: sticky; top: 88px; z-index: 90;
+      padding: 8px 12px 6px;
+    }
+    #more-filters { display: none; padding-top: 4px; }
+    #more-filters.open { display: block; }
+    #toggle-filters {
+      background: none; border: 1.5px solid var(--border);
+      border-radius: 20px; padding: 4px 10px; font-size: .75rem;
+      font-weight: 600; color: var(--muted); cursor: pointer;
+      white-space: nowrap; flex-shrink: 0; transition: all .15s;
+    }
+    #toggle-filters.active {
+      background: var(--primary-light); border-color: var(--primary); color: var(--primary);
     }
     .search-wrap {
       position: relative; margin-bottom: 8px;
@@ -300,6 +314,7 @@
 </head>
 <body>
 
+<div id="sticky-top">
 <header>
   <div class="header-top">
     <div>
@@ -319,30 +334,35 @@
     <button id="search-clear" onclick="clearSearch()" aria-label="Clear">✕</button>
   </div>
 
-  <div class="filter-row days" id="day-filters">
+  <div class="filter-row days" style="margin-bottom:6px">
     <span class="chip day-all active" data-day="">All days</span>
     <span class="chip day-mon" data-day="Monday">Mon 23</span>
     <span class="chip day-tue" data-day="Tuesday">Tue 24</span>
     <span class="chip day-wed" data-day="Wednesday">Wed 25</span>
     <span class="chip day-thu" data-day="Thursday">Thu 26</span>
+    <span style="flex:1"></span>
+    <button id="toggle-filters">⚙ Filters</button>
   </div>
 
-  <div class="filter-row" id="priority-filters">
-    <span class="chip tag-chip prio-chip" data-prio="1">★ Others</span>
-    <span class="chip tag-chip prio-chip" data-prio="2">★★ Recommended</span>
-    <span class="chip tag-chip prio-chip" data-prio="3">★★★ Must-see</span>
+  <div id="more-filters">
+    <div class="filter-row" id="priority-filters" style="margin-bottom:6px">
+      <span class="chip tag-chip prio-chip" data-prio="1">★ Others</span>
+      <span class="chip tag-chip prio-chip" data-prio="2">★★ Recommended</span>
+      <span class="chip tag-chip prio-chip" data-prio="3">★★★ Must-see</span>
+    </div>
+    <div class="filter-row" id="tag-filters" style="margin-bottom:6px">
+      <!-- populated by JS -->
+    </div>
+    <div class="filter-row" id="room-filters" style="margin-bottom:6px">
+      <!-- populated by JS -->
+    </div>
+    <div style="padding-bottom:4px">
+      <label class="past-toggle on" id="hide-past-label">
+        <input type="checkbox" id="hide-past" checked> Hide past talks
+      </label>
+    </div>
   </div>
-  <div class="filter-row" id="tag-filters">
-    <!-- populated by JS -->
-  </div>
-  <div class="filter-row" id="room-filters">
-    <!-- populated by JS -->
-  </div>
-  <div style="padding-top:6px">
-    <label class="past-toggle on" id="hide-past-label">
-      <input type="checkbox" id="hide-past" checked> Hide past talks
-    </label>
-  </div>
+</div>
 </div>
 
 <div class="results-meta" id="results-meta"></div>
@@ -455,14 +475,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 180);
   });
 
-  // Day filter chips
-  document.getElementById('day-filters').addEventListener('click', (e) => {
+  // Day filter chips — delegate on the parent filter-row
+  document.querySelector('.filter-row.days').addEventListener('click', (e) => {
     const chip = e.target.closest('.chip[data-day]');
     if (!chip) return;
-    document.querySelectorAll('#day-filters .chip').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('.filter-row.days .chip[data-day]').forEach(c => c.classList.remove('active'));
     chip.classList.add('active');
     selectedDay = chip.dataset.day;
     render();
+  });
+
+  // Toggle extra filters
+  document.getElementById('toggle-filters').addEventListener('click', () => {
+    const panel = document.getElementById('more-filters');
+    const btn = document.getElementById('toggle-filters');
+    const open = panel.classList.toggle('open');
+    btn.classList.toggle('active', open);
+    btn.textContent = open ? '⚙ Filters ▲' : '⚙ Filters';
   });
 
   // Tag filter chips
