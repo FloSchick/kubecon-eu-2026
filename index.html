@@ -463,6 +463,25 @@ document.addEventListener('DOMContentLoaded', () => {
   TALKS_DATA.forEach(t => { if (!t.priority) t.priority = 1; });
   buildTagFilters();
   buildRoomFilters();
+
+  // Pre-apply filters: current conference day + ★★/★★★ recommended
+  const TODAY = new Date().toISOString().slice(0, 10);
+  const todayDay = Object.entries(CONF_DATES).find(([, d]) => d === TODAY)?.[0];
+  if (todayDay) {
+    selectedDay = todayDay;
+    document.querySelectorAll('.filter-row.days .chip[data-day]').forEach(c => {
+      c.classList.toggle('active', c.dataset.day === todayDay);
+    });
+  }
+  [2, 3].forEach(p => {
+    selectedPriorities.add(p);
+    document.querySelector(`.prio-chip[data-prio="${p}"]`)?.classList.add('active');
+  });
+  // Open filter panel so priority chips are visible on first load
+  document.getElementById('more-filters').classList.add('open');
+  document.getElementById('toggle-filters').classList.add('active');
+  document.getElementById('toggle-filters').textContent = '⚙ Filters ▲';
+
   render();
   document.getElementById('talk-count-badge').textContent = TALKS_DATA.length + ' talks';
 
